@@ -4,6 +4,7 @@
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 #include <unistd.h>       /* time */
+#include <string.h>
 
 uint32_t **matrix;
 uint32_t v, e;
