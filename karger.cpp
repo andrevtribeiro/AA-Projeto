@@ -111,6 +111,12 @@ int main(int argc, char** argv, char** envp) {
     }
 
     parse_input(argv[1]);
+
+    for(int i = 0; i < v; i++){
+        for(int j = 0; j < v; j++)
+            std::cout << matrix[i][j] << " ";
+        std::cout << std::endl;
+    }
     karger(v);
 
     return 0;
