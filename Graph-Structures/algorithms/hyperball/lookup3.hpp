@@ -30,6 +30,7 @@ on 1 byte), but shoehorning those bytes into integers efficiently is messy.
 --------------------------------------------------˚-----------------------------
 */
 //#define SELF_TEST 0
+#pragma once
 #include <stdio.h>      /* defines printf for tests */
 #include <time.h>       /* defines time_t for timings in the test */
 #ifdef _WIN32
