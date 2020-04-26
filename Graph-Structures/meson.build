@@ -18,8 +18,8 @@ compiler = meson.get_compiler('cpp')
 warning_level = get_option('warning_level').to_int()
 if compiler.get_id() == 'gcc'
     message('Compiler: GCC')
-    libs_compiler = ['-lstdc++fs']
-    libs_linker   = ['-lstdc++fs']
+    libs_compiler = ['-lstdc++fs', '-fopenmp']
+    libs_linker   = ['-lstdc++fs', '-fopenmp']
 elif compiler.get_id() == 'clang'
     message('Compiler: LLVM/clang')
     libs_compiler = ['-stdlib=libc++']
@@ -27,7 +27,7 @@ elif compiler.get_id() == 'clang'
 endif
 
 add_global_arguments('-Wall', '-Wextra', '-Wunused',
-                     '-Werror', '-O3', '-Ofast',
+                     '-O3', '-Ofast',
                      #'-g',
                      # UNDONE: upgrade to packages or create source files
                      '-Wno-missing-declarations',
