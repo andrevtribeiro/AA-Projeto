@@ -102,3 +102,6 @@ struct CSRGraph : Graph {
     cout << endl;
   }
 };
+
+
+CSRGraph ReadGraphAsCSR();
