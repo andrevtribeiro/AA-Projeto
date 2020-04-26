@@ -66,6 +66,7 @@ void union_op(uint64_t *M, uint64_t *N){
 void hyperball(CSRGraph& graph) {
     uint64_t& N = graph.N;
 	uint64_t t, s, s_new;
+	uint64_t test_array[1039] = {0};
 
     uint64_t *c = (uint64_t*) calloc(1, sizeof(uint64_t)*N*m);
 	uint64_t *c_copy = (uint64_t*) calloc(1, sizeof(uint64_t)*N*m);
@@ -96,6 +97,7 @@ void hyperball(CSRGraph& graph) {
 		s = s_new;
 		s_new = 0;
 
+		#pragma omp parallel for
 		for(uint64_t v = 0; v < N; v++){
 			// memcpy(c, c_copy, sizeof((uint64_t*)*N)m
 			for(NodeId w : graph.GetNeighboors((NodeId)v)) {
@@ -104,12 +106,28 @@ void hyperball(CSRGraph& graph) {
 		}
 		
 		memcpy(c, c_copy, sizeof(uint64_t)*N*m);
-		t++;
+		
 		for(uint64_t v = 0; v < N; v++){
 			// cout << size(&c[v*m]) << endl; 
 			s_new += size(&c[v*m]);
 		}
 		cout << s_new - s << endl;
-		cout << s_new << endl;
+		test_array[++t] = s_new - s;
 	} while(s != s_new);
+
+	double apl = 0;
+	uint64_t sum = 0;
+	for(uint64_t i = 1; i < t; i++){
+		apl += (i)*test_array[i];
+		sum += test_array[i];
+		i++;
+	}
+	apl = apl/sum;
+
+	cout << apl << endl;
+	cout << t-1 << endl;
 }
+
+
+// 12.0191
+// 37
