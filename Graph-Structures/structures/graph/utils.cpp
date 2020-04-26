@@ -51,8 +51,6 @@ CSRGraph ReadGraphAsCSR() {
   for (NodeId i = 0; i < E; i++) {
     NodeId a, b;
     cin >> a >> b;
-    a--;
-    b--;
     edges.push_back({a, b});
   }
   return CSRGraph(N, edges);
