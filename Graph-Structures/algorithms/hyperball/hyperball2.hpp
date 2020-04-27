@@ -3,7 +3,6 @@
 #include "lookup3.hpp"
 #include <math.h>
 #include <string.h>
-#include <mutex>
 
 #define ROT(x,k) (((x)<<(k)) | ((x)>>(32-(k))))
 #define MAX(x,y) (x > y ? x : y)
@@ -15,11 +14,10 @@ void hashlittle2(
   uint32_t   *pb);        /* IN: secondary initval, OUT: secondary hash */
 
 // 0.7213/(1+(1.079)/m) -> m = 4096
-double alpha =0.673 ;
-int B = 4;
-uint64_t m = 16;
-uint64_t m_square = 256;
-std::mutex mtx;   
+const double alpha = 0.7211100396160289;
+const int B = 12;
+const uint64_t m = 4096;
+const uint64_t m_square = 16777216;
 
 using namespace std;
 
@@ -38,122 +36,87 @@ uint64_t ro(uint64_t w) {
 }
 
 
-double size(uint64_t *counter) {
-	double res = 0,res2=0;
-	uint64_t v=0;
+uint64_t size(uint64_t *counter) {
+	double res = 0;
 	for(uint64_t i = 0; i < m; i++) {
-		//if(counter[i]==0)v++;
 		res += 1/pow(2, counter[i]);
 	}
-	res=1/res;
-	res=alpha*m_square*res;
-	/*cout<<"SIZE-> "<<res;
-	if(res<=5/2*m){
-		if(v!=0){
-			res=m*log2((double)m/v);
-			cout<<" if-> "<<res;
-		}
-	}
-	cout<<endl;*/
-	return res;
+	res = 1/res;
+	return round(alpha*m_square*res);
 }
 
 
 void add(uint64_t *counter, uint64_t v) {
 	uint64_t x = 0, j, w;
+	
 	hashlittle2(&v, sizeof(v), (uint32_t*)&x, ((uint32_t*)&x) + 1);
+
+
 	j = (x >> (64-B));
 	w = x & ((uint64_t)-1 >> B);
 	counter[j] = MAX(counter[j], ro(w));
 }
 
-bool union_op(uint64_t *M, uint64_t *N){
-	bool control= false;
-	uint64_t new_value=0;
+void union_op(uint64_t *M, uint64_t *N){
     for(uint64_t i = 0; i <  m; i++) {
-    	//M[i] = MAX(M[i], N[i]);
-
-        new_value = M[i] ^ ((M[i] ^ N[i]) & -(M[i] < N[i])); 
-		if(new_value!=M[i])control=true;
-		M[i]=new_value;
+      M[i] = MAX(M[i], N[i]);
     }
-	return control;
 } 
-void initialize(uint64_t parameter){
-	m=parameter;
-	B=log2(parameter);
-	m_square=pow(m,2);
-	alpha=0.7213/(1+1.079/m);
-	cout<<m<<" "<<B<<" "<<m_square<<" "<<alpha<<" "<<endl;
-}
-void hyperball(CSRGraph& graph,uint64_t parameter) {
+
+void hyperball(CSRGraph& graph) {
     uint64_t& N = graph.N;
-	uint64_t t;
-	double s, s_new;
+	uint64_t t, s, s_new;
 	uint64_t test_array[1039] = {0};
-	initialize(parameter);
 
     uint64_t *c = (uint64_t*) calloc(1, sizeof(uint64_t)*N*m);
 	uint64_t *c_copy = (uint64_t*) calloc(1, sizeof(uint64_t)*N*m);
-	double *sizes = (double*) calloc(1, sizeof(double)*N);
 
 	if(!c){
 		cout << "error allocating counters" << endl;
 		exit(0);
 	}
 
-	#pragma omp parallel for
+
 	for(uint64_t v = 0; v < N; v++) {
+
 		add(&c[v*m], v);
 	}
 
-	
+	memcpy(c_copy, c, sizeof(uint64_t)*N*m);
 
 	s = 0;
 	s_new = 0;
-	#pragma omp parallel for reduction(+ : s_new)
 	for(uint64_t v = 0; v < N; v++){
-		sizes[v]=size(&c[v*m]);
-		s_new+=sizes[v];
+		s_new += size(&c[v*m]);
 	}
+	cout << s_new << endl;
 	
-	memcpy(c_copy, c, sizeof(uint64_t)*N*m);
-
-
-	//cout << s_new << endl;
-
+	
 	t = 0;
 	do {
 		s = s_new;
-		
+		s_new = 0;
+
 		#pragma omp parallel for reduction(+ : s_new)
 		for(uint64_t v = 0; v < N; v++){
-			bool control=false;
-			double size_node;
 			// memcpy(c, c_copy, sizeof((uint64_t*)*N)m
 			for(NodeId w : graph.GetNeighboors((NodeId)v)) {
-				if(union_op(&c_copy[v*m], &c[w*m]))control=true;
+				union_op(&c_copy[v*m], &c[w*m]);
 			}
-			if(control){
-				size_node=size(&c_copy[v*m]);
-				s_new+=size_node-sizes[v];	
-				sizes[v]=size_node;
-			}
-			//s_new += size(&c_copy[v*m]);
+            s_new += size(&c_copy[v*m]);
 		}
 		
 		memcpy(c, c_copy, sizeof(uint64_t)*N*m);
-
-		/*#pragma omp parallel for reduction(+ : s_new)
-		for(uint64_t v = 0; v < N; v++){
+		
+		/*for(uint64_t v = 0; v < N; v++){
+			// cout << size(&c[v*m]) << endl; 
 			s_new += size(&c[v*m]);
 		}*/
-		
-	
-		cout << s_new<<" "<<s_new - s << endl;
+
+		cout << s_new - s << endl;
 		test_array[++t] = s_new - s;
-	} while(abs(s_new-s)>0.00001);
-	
+	} while(s != s_new);
+
 	double apl = 0;
 	uint64_t sum = 0;
 	for(uint64_t i = 1; i < t; i++){

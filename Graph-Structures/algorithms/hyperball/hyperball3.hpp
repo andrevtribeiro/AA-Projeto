@@ -19,7 +19,7 @@ double alpha =0.673 ;
 int B = 4;
 uint64_t m = 16;
 uint64_t m_square = 256;
-std::mutex mtx;   
+std::mutex mtx;
 
 using namespace std;
 
@@ -38,13 +38,14 @@ uint64_t ro(uint64_t w) {
 }
 
 
-double size(uint64_t *counter) {
+double size(uint64_t *counter,double *fraction) {
 	double res = 0,res2=0;
 	uint64_t v=0;
 	for(uint64_t i = 0; i < m; i++) {
 		//if(counter[i]==0)v++;
 		res += 1/pow(2, counter[i]);
 	}
+    *fraction=res;
 	res=1/res;
 	res=alpha*m_square*res;
 	/*cout<<"SIZE-> "<<res;
@@ -67,17 +68,17 @@ void add(uint64_t *counter, uint64_t v) {
 	counter[j] = MAX(counter[j], ro(w));
 }
 
-bool union_op(uint64_t *M, uint64_t *N){
-	bool control= false;
+void union_op(uint64_t *M, uint64_t *N,double *fraction){
 	uint64_t new_value=0;
     for(uint64_t i = 0; i <  m; i++) {
     	//M[i] = MAX(M[i], N[i]);
 
         new_value = M[i] ^ ((M[i] ^ N[i]) & -(M[i] < N[i])); 
-		if(new_value!=M[i])control=true;
+		if(new_value!=M[i]){
+            *fraction+=1/pow(2,new_value)-1/pow(2,M[i]);
+        }
 		M[i]=new_value;
     }
-	return control;
 } 
 void initialize(uint64_t parameter){
 	m=parameter;
@@ -95,7 +96,7 @@ void hyperball(CSRGraph& graph,uint64_t parameter) {
 
     uint64_t *c = (uint64_t*) calloc(1, sizeof(uint64_t)*N*m);
 	uint64_t *c_copy = (uint64_t*) calloc(1, sizeof(uint64_t)*N*m);
-	double *sizes = (double*) calloc(1, sizeof(double)*N);
+	double *fractions = (double*) calloc(1, sizeof(double)*N);
 
 	if(!c){
 		cout << "error allocating counters" << endl;
@@ -113,8 +114,7 @@ void hyperball(CSRGraph& graph,uint64_t parameter) {
 	s_new = 0;
 	#pragma omp parallel for reduction(+ : s_new)
 	for(uint64_t v = 0; v < N; v++){
-		sizes[v]=size(&c[v*m]);
-		s_new+=sizes[v];
+		s_new+=size(&c[v*m],&fractions[v]);
 	}
 	
 	memcpy(c_copy, c, sizeof(uint64_t)*N*m);
@@ -125,6 +125,7 @@ void hyperball(CSRGraph& graph,uint64_t parameter) {
 	t = 0;
 	do {
 		s = s_new;
+        s_new=0;
 		
 		#pragma omp parallel for reduction(+ : s_new)
 		for(uint64_t v = 0; v < N; v++){
@@ -132,14 +133,9 @@ void hyperball(CSRGraph& graph,uint64_t parameter) {
 			double size_node;
 			// memcpy(c, c_copy, sizeof((uint64_t*)*N)m
 			for(NodeId w : graph.GetNeighboors((NodeId)v)) {
-				if(union_op(&c_copy[v*m], &c[w*m]))control=true;
+				union_op(&c_copy[v*m], &c[w*m],&fractions[v]);
 			}
-			if(control){
-				size_node=size(&c_copy[v*m]);
-				s_new+=size_node-sizes[v];	
-				sizes[v]=size_node;
-			}
-			//s_new += size(&c_copy[v*m]);
+			s_new += alpha*m_square*(1/fractions[v]);
 		}
 		
 		memcpy(c, c_copy, sizeof(uint64_t)*N*m);
