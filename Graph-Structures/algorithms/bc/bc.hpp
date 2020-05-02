@@ -53,18 +53,7 @@ uint64_t BFS(CSRGraph& graph, NodeId v, vector<list<NodeId> >& prev, int* dist, 
                 prev[i].push_front(v);
             }
         } 
-    } 
-
-    0 -> 1 -> 3
-      -> 2 /
-
-    013
-    123
-
-    0
-    1 2
-    3
-    3
+    }
 
     std::cout << std::endl;
     return iterations;
@@ -78,7 +67,7 @@ int diameter(CSRGraph& graph){
     return 0;
 }
 
-void all_paths(list<NodeId> &prev, vector<list<NodeId> >&big_prev, vector<NodeId> current , list<vector<NodeId>>& n_sps){
+void all_paths(list<NodeId> prev, vector<list<NodeId> >&big_prev, vector<NodeId> current , list<vector<NodeId>>& n_sps){
 
     if(prev.empty()){
         n_sps.push_front(current);
@@ -88,7 +77,6 @@ void all_paths(list<NodeId> &prev, vector<list<NodeId> >&big_prev, vector<NodeId
         NodeId node = prev.front();
         vector<NodeId> tmp = vector<NodeId>(current);
         tmp.push_back(node);
-  
         prev.pop_front();
         all_paths(big_prev[node], big_prev, tmp, n_sps);
     }
@@ -108,67 +96,137 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
 
     list<vector<NodeId>> sps;
     std::vector<uint64_t>* access_vector = new std::vector<uint64_t>(N);
+    std::vector<double>* bcs = new std::vector<double>(N);
+    
 
     // set some values:
-    for (int i=0; i<N; ++i) (*access_vector)[i] = i; 
+    for (int i=0; i<N; ++i){
+        (*access_vector)[i] = i;
+        (*bcs)[i]=0;
+    }
 
     // using built-in random generator:
     std::random_shuffle ( access_vector->begin(), access_vector->end() );
 
-    
     std::mt19937 generator(time(0));
     std::uniform_int_distribution<int> distribution(0, N-1);
 
     uint64_t v = distribution(generator);
-    
     n_sp = BFS(graph, v, prev, dist, &max1, &max2);
+
+    for(uint64_t i=0;i<N;i++){
+        std::cout<<i<<"->";
+        for(NodeId id:prev[i]){
+            std::cout<<id<<" ";
+        }
+        std::cout<<std::endl; 
+
+    }
     
     for(uint64_t i : *access_vector){
-        std::cout << "i: " << i << std::endl;
+        if(i==v)continue;
         vector<NodeId> vec = vector<NodeId>();
         vec.push_back(i);
         all_paths(prev[i], prev, vec, sps);
+    }
 
-    
+    for(vector<NodeId> p : sps){
+        for(NodeId v : p){
+            std::cout << v << " ";
+        }
+        std::cout << std::endl;
+    }
+
+
+    diameter = max1 + max2;
+
+    r = (c/pow(epsilon, 2))*(floor(log2(diameter-2)) + log(1/delta));
+    std::cout<<r<<std::endl;
+
+    vector<list<vector<NodeId>>> Suv(N);
+    for(vector<NodeId> p: sps){
+        Suv[p[0]].push_front(p);
+    }
+
+    for(uint64_t i = 1; i <= r; i++){
+    //     // sample
+        if(sps.empty()){
+            v = distribution(generator);
+            prev = vector<list<NodeId> >(N);
+            memset(dist,0,sizeof(int)*N);
+            n_sp = BFS(graph, v, prev, dist, &max1, &max2);
+            std::cout<<"SAI"<<std::endl;
+            for(uint64_t i : *access_vector){
+                if(i==v)continue;
+                vector<NodeId> vec = vector<NodeId>();
+                vec.push_back(i);
+                all_paths(prev[i], prev, vec, sps);
+            }
+            Suv=vector<list<vector<NodeId>>>(N);
+            for(vector<NodeId> p: sps){
+                Suv[p[0]].push_front(p);
+            }
+        }
+
+        
+        NodeId target=sps.front()[0];
+        
+        std::cout<<"OOOII"<<std::endl;
         for(vector<NodeId> p : sps){
             for(NodeId v : p){
                 std::cout << v << " ";
             }
             std::cout << std::endl;
         }
-
+        NodeId j=target;
+        NodeId s=target;
+        NodeId t=target;
+        
+        while(t!=v){
+            std::cout<<"S "<<s<<" T "<<t<<std::endl;
+            vector<int> vetor(N,0);
+            // if(Suv[s].front().size()==2){
+            //     std::cout<<"OUT"<<std::endl;
+            //     break;
+            // }
+            int c=0;
+            for(vector<NodeId> ve : Suv[s]){
+                bool flag=false;
+                for(int i=0; i<(ve.size()-1);i++){          
+                    if(flag){
+                        vetor[ve[i]]=Suv[ve[i]].size();
+                        c++;
+                    }
+                    if(ve[i]==t)flag=true;
+                }
+            }
+            if(!c){
+                std::cout<<"flag false"<<std::endl;
+                break;
+            }
+            for(int i:vetor){
+                std::cout<<i<<" ";
+            }
+            std::cout<<std::endl;      
+            std::discrete_distribution<int> dist(vetor.begin(),vetor.end());
+            for(double x:dist.probabilities()) std::cout<<x<<" ";
+            std::cout<<std::endl;
+            NodeId z=dist(generator);
+            std::cout<<"V "<<z<<std::endl;
+            if(z!=v){   
+                (*bcs)[z]=(*bcs)[z]+(double)1/r;
+                s=t;
+                t=z;
+            }
+        }
+        while(!sps.empty() && sps.front()[0]==target)
+            sps.pop_front();
     }
-    exit(0);
 
-
-    diameter = max1 + max2;
-
-    r = (c/pow(epsilon, 2))*(log2(diameter-2) + log(1/delta));
-
-    // for(uint64_t i = 1; i <= r; i++){
-    //     // sample
-
-    //     if(!sps.empty())
-
-
-
-
-    //     // compute shortest paths
-    //     // while
-
-    // }
-
-
-    std::cout << std::endl << max1 << " " << max2 << std::endl;
-
-    for (int i = 0; i < N; i++){
-        std::cout << i << " " << dist[i] << std::endl;
+    for(uint64_t i=0;i<N;i++){
+        std::cout<<(*bcs)[i]<<" ";
     }
-    
+
     return;
 
 }
-
-
-// 12.0191
-// 37
