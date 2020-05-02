@@ -1,6 +1,6 @@
 #include <algorithm>
 #include "algorithms/hyperball/hyperball3.hpp"
-#include "algorithms/bc/bc.hpp"
+#include "algorithms/bc/bc2.hpp"
 #include "structures/graph/compressed_sparse_rows.hpp"
 #include <random>
 #include <set>
