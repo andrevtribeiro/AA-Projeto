@@ -8,7 +8,7 @@
 double _epsilon;
 double _delta;
 
-uint64_t BFS(CSRGraph& graph, NodeId v, vector<list<NodeId> >& prev, int* dist, int* max1, int* max2){
+uint64_t BFS(CSRGraph& graph, NodeId v, vector<list<NodeId> >& prev, int* dist, int* max1, int* max2,bool undirected){
     uint64_t iterations = 0;
     uint64_t source = v;
     vector<NodeId>* neighbours = new vector<NodeId>(graph.GetNeighboors(v));
@@ -17,8 +17,9 @@ uint64_t BFS(CSRGraph& graph, NodeId v, vector<list<NodeId> >& prev, int* dist, 
     list<int> queue; 
   
     queue.push_back(v); 
-
-    neighbours->insert(neighbours->end(), rev_neighbours->begin(), rev_neighbours->end());
+    if(undirected){       
+        neighbours->insert(neighbours->end(), rev_neighbours->begin(), rev_neighbours->end());
+    }
     dist[v] = 0;
     while(!queue.empty()) { 
         
@@ -112,7 +113,7 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
     std::uniform_int_distribution<int> distribution(0, N-1);
 
     uint64_t v = distribution(generator);
-    n_sp = BFS(graph, v, prev, dist, &max1, &max2);
+    n_sp = BFS(graph, v, prev, dist, &max1, &max2,true);
 
     for(uint64_t i=0;i<N;i++){
         std::cout<<i<<"->";
@@ -123,19 +124,19 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
 
     }
     
-    for(uint64_t i : *access_vector){
-        if(i==v)continue;
-        vector<NodeId> vec = vector<NodeId>();
-        vec.push_back(i);
-        all_paths(prev[i], prev, vec, sps);
-    }
+    // for(uint64_t i : *access_vector){
+    //     if(i==v)continue;
+    //     vector<NodeId> vec = vector<NodeId>();
+    //     vec.push_back(i);
+    //     all_paths(prev[i], prev, vec, sps);
+    // }
 
-    for(vector<NodeId> p : sps){
-        for(NodeId v : p){
-            std::cout << v << " ";
-        }
-        std::cout << std::endl;
-    }
+    // for(vector<NodeId> p : sps){
+    //     for(NodeId v : p){
+    //         std::cout << v << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
 
 
     diameter = max1 + max2;
@@ -154,7 +155,7 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
             v = distribution(generator);
             prev = vector<list<NodeId> >(N);
             memset(dist,0,sizeof(int)*N);
-            n_sp = BFS(graph, v, prev, dist, &max1, &max2);
+            n_sp = BFS(graph, v, prev, dist, &max1, &max2,false);
             std::cout<<"SAI"<<std::endl;
             for(uint64_t i : *access_vector){
                 if(i==v)continue;
