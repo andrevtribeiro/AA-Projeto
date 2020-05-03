@@ -105,3 +105,4 @@ struct CSRGraph : Graph {
 
 
 CSRGraph ReadGraphAsCSR();
+CSRGraph ReadUndirectedGraphAsCSR();

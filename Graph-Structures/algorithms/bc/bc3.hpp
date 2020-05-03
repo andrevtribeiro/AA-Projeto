@@ -9,7 +9,7 @@
 double _epsilon;
 double _delta;
 
-uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, int* dist, int* max1, int* max2){
+uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, int* dist,int* sigma, int* max1, int* max2){
     uint64_t iterations = 0;
     uint64_t source = v;
     vector<NodeId>* neighbours;
@@ -35,6 +35,7 @@ uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, i
                 iterations++;
                 dist[i] = dist[v]+1;
                 prev[i].push_front(v);
+                sigma[i]+=sigma[v];
 
                 if(dist[i] >= *max1){
                     *max2 = *max1;
@@ -43,6 +44,7 @@ uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, i
                 queue.push_back(i); 
             } else if(i != source && dist[i] == dist[v]+1){
                 prev[i].push_front(v);
+                sigma[i]+=sigma[v];
             }
         }
         delete neighbours; 
@@ -84,8 +86,8 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
 
     vector<list<NodeId> > prev = vector<list<NodeId> >(N);
     int* dist = (int*) calloc(1, sizeof(int)*N);
+    int* sigma = (int*) calloc(1, sizeof(int)*N);
 
-    set<vector<NodeId>> sps;
     std::vector<uint64_t>* access_vector = new std::vector<uint64_t>(N);
     std::vector<double>* bcs = new std::vector<double>(N);
     
@@ -103,20 +105,17 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
     std::uniform_int_distribution<int> distribution(0, N-1);
 
     u = distribution(generator);
-    n_sp = BFS(graph, u, u,prev, dist, &max1, &max2);
+    n_sp = BFS(graph, u, u,prev, dist,sigma, &max1, &max2);
     diameter = max1 + max2;
-
     r = (c/pow(epsilon, 2))*(floor(log2(diameter-2)) + log(1/delta));
-    
-    vector<list<vector<NodeId>>> Suv(N);
-
+    // std::cerr<<r<<std::endl;
     // std::cerr << "r: " << r << std::endl;
-    for(uint64_t i = 1; i <= r; i++){
-
+    double normalize = 0;
+    for(uint64_t i = 1; i <= r;i++){
+        // std::cerr<<i<<std::endl;
         // if(i % 1000 == 0) std::cerr << i << std::endl;
         u = distribution(generator);
         v = distribution(generator);
-    
         if(u==v){
             continue;
         }
@@ -124,60 +123,52 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
         prev.clear();
         prev.resize(N);
         memset(dist,0,sizeof(int)*N);
-        n_sp = BFS(graph, u, v, prev, dist, &max1, &max2);
-
-        list<vector<NodeId>> vec = list<vector<NodeId>>();
-
-        vec.push_back(vector<NodeId>({v}));
-        sps.clear();
-
-        all_paths(prev[v], prev, vec, sps);
-
-        Suv.clear();
-        Suv.resize(N);
-
-        for(vector<NodeId> p: sps){
-            Suv[p[0]].push_front(p);
-        }
+        memset(sigma,0,sizeof(int)*N);
+        sigma[u]=1;
+        n_sp = BFS(graph, u, v, prev, dist,sigma, &max1, &max2);
+        
 
         NodeId j=v;
         NodeId s=v;
         NodeId t=v;
-        
-        while(t!=u){
+        bool stop=false;
+        if(prev[s].empty()){
+            // std::cerr << "emptyyy!" << std::endl;
+            stop = true;
+        }
+        while(!stop){
             vector<int> vetor(N,0);
-            int c=0;
-            for(vector<NodeId> ve : Suv[s]){
-                bool flag=false;
-                for(int i=0; i<(ve.size()-1);i++){          
-                    if(flag){
-                        vetor[ve[i]]=Suv[ve[i]].size();
-                        c++;
-                    }
-                    if(ve[i]==t)flag=true;
-                }
-            }
-            if(!c){
-                break;
+
+            for(NodeId p:prev[s]){
+                vetor[p]=sigma[p];
             }
             std::discrete_distribution<int> dist(vetor.begin(),vetor.end());
             NodeId z=dist(generator);
-            if(z!=u){   
+            if(z!=u){
                 (*bcs)[z]=(*bcs)[z]+((double)1)/r;
+                normalize+=((double)1)/r;
                 s=t;
                 t=z;
+            } else {
+                stop = true;
             }
         }
+        // std::cerr<<"Ola de fora "<<std::endl;
+
     }
 
-    double a = 0;
-
+    
+    int maxNode=-1;
+    double val = -1;
     for(uint64_t i=0;i<N;i++){
-        a +=(*bcs)[i];
-        std::cout<<(*bcs)[i]<<" ";
+        if((*bcs)[i]/normalize > val){
+            maxNode = i;
+            val = (*bcs)[i]/normalize;
+        }
+        std::cout<<(*bcs)[i]/normalize<<" ";
     }
 
-    std::cout << std::endl << "sum: " << a << std::endl;
+    std::cout << std::endl << "normalize: "<< normalize << std::endl;
 
     return;
 }

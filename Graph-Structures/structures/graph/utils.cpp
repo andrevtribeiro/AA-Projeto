@@ -55,6 +55,18 @@ CSRGraph ReadGraphAsCSR() {
   }
   return CSRGraph(N, edges);
 }
+CSRGraph ReadUndirectedGraphAsCSR() {
+  NodeId N, E;
+  vector<Edge> edges;
+  cin >> N >> E;
+  for (NodeId i = 0; i < E; i++) {
+    NodeId a, b;
+    cin >> a >> b;
+    edges.push_back({a, b});
+    edges.push_back({b, a});
+  }
+  return CSRGraph(N, edges);
+}
 
 EdgeList ReadGraphAsEdgeList() {
   NodeId N, E;

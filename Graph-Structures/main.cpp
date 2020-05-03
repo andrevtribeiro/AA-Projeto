@@ -59,11 +59,10 @@ int main(int argc, char** argv) {
   // {1,4,10}, {2,4,5}, {3,4,15}, {3,5,6}, {4,5,12}, {4,6,8}, {5,6,13}});
 
   // EdgeListW mst = Boruvka(graphW);
-  CSRGraph graph = ReadGraphAsCSR();
+  CSRGraph graph = ReadUndirectedGraphAsCSR();
   
   // 0.01, 0.1, 0.5
-  // bc(graph, atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
-  bc(graph, 0.01, 0.1, 0.5);
+  bc(graph, stod(argv[1]), stod(argv[2]), stod(argv[3]));
 
   /*uint64_t *c = (uint64_t*) calloc(1, sizeof(uint64_t)*16);
   int i=0;
