@@ -1,6 +1,6 @@
 #include <algorithm>
 #include "algorithms/hyperball/hyperball3.hpp"
-#include "algorithms/bc/bc2.hpp"
+#include "algorithms/bc/bc3.hpp"
 #include "structures/graph/compressed_sparse_rows.hpp"
 #include <random>
 #include <set>
@@ -60,7 +60,9 @@ int main(int argc, char** argv) {
 
   // EdgeListW mst = Boruvka(graphW);
   CSRGraph graph = ReadGraphAsCSR();
-
+  
+  // 0.01, 0.1, 0.5
+  // bc(graph, atoi(argv[1]), atoi(argv[2]), atoi(argv[3]));
   bc(graph, 0.01, 0.1, 0.5);
 
   /*uint64_t *c = (uint64_t*) calloc(1, sizeof(uint64_t)*16);

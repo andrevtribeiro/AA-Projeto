@@ -9,21 +9,16 @@
 double _epsilon;
 double _delta;
 
-uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, int* dist, int* max1, int* max2,bool undirected){
+uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, int* dist, int* max1, int* max2){
     uint64_t iterations = 0;
     uint64_t source = v;
-    vector<NodeId>* neighbours = new vector<NodeId>(graph.GetNeighboors(v));
-    vector<NodeId>* rev_neighbours;
+    vector<NodeId>* neighbours;
   
     list<int> queue; 
   
     queue.push_back(v); 
-    if(undirected){       
-        rev_neighbours = new vector<NodeId>(graph.GetReverseNeighboors(v));
-        neighbours->insert(neighbours->end(), rev_neighbours->begin(), rev_neighbours->end());
-    }
     dist[v] = 0;
-    while(!queue.empty() && (undirected || dist[t]==0)) { 
+    while(!queue.empty() && dist[t]==0) { 
         
         // Dequeue a vertex from queue and print it 
         v = queue.front(); 
@@ -32,14 +27,8 @@ uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, i
         // Get all adjacent vertices of the dequeued 
         // vertex s. If a adjacent has not been visited,  
         // then mark it visited and enqueue it 
-        delete neighbours;
-
+        
         neighbours = new vector<NodeId>(graph.GetNeighboors(v));
-        if(undirected){       
-            delete rev_neighbours;
-            rev_neighbours = new vector<NodeId>(graph.GetReverseNeighboors(v));
-            neighbours->insert(neighbours->end(), rev_neighbours->begin(), rev_neighbours->end());
-        }
 
         for (NodeId i : *neighbours) { 
             if (i != source && dist[i] == 0) { 
@@ -55,7 +44,8 @@ uint64_t BFS(CSRGraph& graph, NodeId v, NodeId t, vector<list<NodeId> >& prev, i
             } else if(i != source && dist[i] == dist[v]+1){
                 prev[i].push_front(v);
             }
-        } 
+        }
+        delete neighbours; 
     }
 
     return iterations;
@@ -84,8 +74,6 @@ void all_paths(list<NodeId>prev, vector<list<NodeId> >&big_prev, list<vector<Nod
 }
 
 void bc(CSRGraph& graph, double epsilon, double delta, double c) {
-    _epsilon = epsilon;
-    _delta = delta;
     int N = graph.N;
     int max1 = -1;
     int max2 = -1;
@@ -115,18 +103,17 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
     std::uniform_int_distribution<int> distribution(0, N-1);
 
     u = distribution(generator);
-    n_sp = BFS(graph, u, -1,prev, dist, &max1, &max2,true);
-
+    n_sp = BFS(graph, u, u,prev, dist, &max1, &max2);
     diameter = max1 + max2;
 
     r = (c/pow(epsilon, 2))*(floor(log2(diameter-2)) + log(1/delta));
     
     vector<list<vector<NodeId>>> Suv(N);
 
-    std::cerr << "r: " << r << std::endl;
+    // std::cerr << "r: " << r << std::endl;
     for(uint64_t i = 1; i <= r; i++){
 
-        if(i % 1000 == 0) std::cerr << i << std::endl;
+        // if(i % 1000 == 0) std::cerr << i << std::endl;
         u = distribution(generator);
         v = distribution(generator);
     
@@ -137,7 +124,7 @@ void bc(CSRGraph& graph, double epsilon, double delta, double c) {
         prev.clear();
         prev.resize(N);
         memset(dist,0,sizeof(int)*N);
-        n_sp = BFS(graph, u, v, prev, dist, &max1, &max2,false);
+        n_sp = BFS(graph, u, v, prev, dist, &max1, &max2);
 
         list<vector<NodeId>> vec = list<vector<NodeId>>();
 
