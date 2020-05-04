@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
   CSRGraph graph = ReadUndirectedGraphAsCSR();
   
   // 0.01, 0.1, 0.5
-  bc(graph, stod(argv[1]), stod(argv[2]), stod(argv[3]));
+  bc(graph, stod(argv[1]), stod(argv[2]), stod(argv[3]), atoi(argv[4]));
 
   /*uint64_t *c = (uint64_t*) calloc(1, sizeof(uint64_t)*16);
   int i=0;

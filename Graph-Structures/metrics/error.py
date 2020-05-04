@@ -5,13 +5,14 @@ import pandas as pd
 import math
 
 
+ITERATIONS = 5
 OUTPUT_FILE = "out"
 EPSILON = 0.01
 DELTA = 0.1
 C = 0.5
 
 def main(main_dir, graph_dir):
-    graph_name="{}/{}".format(graph_dir,"graph-5000.txt")
+    graph_name="{}/{}".format(graph_dir,"Email-Enron.txt")
     sizes = [0.01,0.02,0.04,0.06,0.08,0.1]
     timesVC_dic = {}
     timesBP_dic = {}
@@ -19,21 +20,39 @@ def main(main_dir, graph_dir):
     average_stddev_error=[]
     average_max_error=[]
     with open(graph_name, "r") as f:
-        edges = f.readlines()
-    
+        edges = f.readlines() 
     edges = edges[1:]
     edges = [(int(e.split(" ")[0]), int(e.split(" ")[1])) for e in edges]
+
     print("exact bc")
     graph_nx = nx.Graph(edges, nodetype=int)
+    t1=time.time()
     bc_exact=nx.betweenness_centrality(graph_nx)
-
+    t2=time.time()
+    time_exact=t1-t2
+    bcs = [ 0 for i in range(graph_nx.number_of_nodes()) ]
     for size in sizes:
         print(size)
-        t1 = time.time()
         print("{}/main {} {} {} < {} > {}".format(main_dir, size, DELTA, C, graph_name, OUTPUT_FILE))
-        os.system("{}/main {} {} {} < {} > {}".format(main_dir, size, DELTA, C, graph_name, OUTPUT_FILE))
-        t2 = time.time()
-        timesVC_dic[size] = t2-t1
+        for i in range(ITERATIONS):
+            print(i)
+            t1 = time.time()    
+            os.system("{}/main {} {} {} < {} > {}".format(main_dir, size, DELTA, C, graph_name, OUTPUT_FILE))
+            t2 = time.time()
+            if size not in timesVC_dic:
+                timesVC_dic[size] = (t2-t1)
+            else:
+                timesVC_dic[size] += (t2-t1)
+
+            with open(OUTPUT_FILE, "r") as f:
+                data = f.read()
+                
+            data = data.split("\n")[0][:-1]
+            data = data.split(" ")
+            for i in range(len(data)):
+                bcs[i]+=float(data[i])/ITERATIONS
+
+        timesVC_dic[size]/=ITERATIONS
 
         print("networkx")
 
@@ -50,19 +69,13 @@ def main(main_dir, graph_dir):
         t2 = time.time()
         timesBP_dic[size] = t2-t1
 
-        with open(OUTPUT_FILE, "r") as f:
-            data = f.read()
-
-        soma=float(data.split("\n")[1].split(":")[1])
-        data=data.split("\n")[0][:-1]
-        
-        data = data.split(" ")
-        err=0
-        stddev=0
+       
+        err = 0
+        stddev = 0
         max_error = -1
-        for i in sorted(bc_exact.keys()):
-            dif=abs(float(data[i])/soma-bc_exact[i])
-            err+=dif
+        for i in range(len(bcs)):
+            dif = abs(bcs[i]-bc_exact[i])
+            err += dif
             max_error = max(max_error, dif)
             stddev += pow(dif, 2)
         print("Error->",err/len(data))
@@ -73,7 +86,7 @@ def main(main_dir, graph_dir):
     
     timesVC = [timesVC_dic[i] for i in sorted(timesVC_dic.keys())]
     timesBP = [timesBP_dic[i] for i in sorted(timesBP_dic.keys())]
-
+    print(average_error)
     print(timesVC)
     print(timesBP)
 
@@ -96,6 +109,7 @@ def main(main_dir, graph_dir):
     df=pd.DataFrame({'Epsilon': sizes, 'VC': timesVC,'BP': timesBP })
     plt.plot( 'Epsilon', 'VC', data=df, marker='o', markerfacecolor='blue', markersize=12, color='skyblue', linewidth=4)
     plt.plot( 'Epsilon', 'BP', data=df, marker='s', markerfacecolor='red', markersize=12, color='red', linewidth=4,linestyle='dashed')
+    plt.hlines(time_exact, sizes[0], sizes[-1], colors='b', linestyles='solid', label='Exact')
     plt.legend()
     plt.savefig('running_time_epsilon.png')
 
